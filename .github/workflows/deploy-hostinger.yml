@@ -120,7 +120,7 @@ jobs:
             **/vite.config.js
 
       - name: Post-deploy Artisan (SSH)
-        if: ${{ secrets.SSH_HOST != '' && secrets.SSH_APP_DIR != '' }}
+        if: ${{ secrets.SSH_HOST != '' }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
