@@ -12,7 +12,7 @@ class PublicResultsController extends Controller
     {
         $election = Election::current();
 
-        return view('public.results', [
+        return view('results.official', [
             'election' => $election,
             'results' => $election && $election->isPublished()
                 ? $results->live($election)

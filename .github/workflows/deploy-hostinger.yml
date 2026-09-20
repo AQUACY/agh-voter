@@ -153,8 +153,8 @@ jobs:
               **/package.json
               **/package-lock.json
               **/vite.config.js
-              **/public/**
-              **/vendor/**
+              public/**
+              vendor/**
 
       - name: Deploy public folder to /public_html/
         uses: Wandalen/wretry.action@v3.5.0
