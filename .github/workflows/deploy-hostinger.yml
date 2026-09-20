@@ -62,8 +62,26 @@ jobs:
 
       - name: Prepare storage folders
         run: |
-          mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
-          touch storage/logs/.gitkeep
+          mkdir -p \
+            storage/app/public \
+            storage/app/private \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/framework/views \
+            storage/logs \
+            bootstrap/cache
+          # Placeholder files so FTPS creates the directories (empty dirs are skipped).
+          touch \
+            storage/app/public/.gitkeep \
+            storage/app/private/.gitkeep \
+            storage/framework/cache/.gitkeep \
+            storage/framework/cache/data/.gitkeep \
+            storage/framework/sessions/.gitkeep \
+            storage/framework/views/.gitkeep \
+            storage/logs/.gitkeep \
+            bootstrap/cache/.gitkeep
+          # Do not ship compiled views / local env
+          find storage/framework/views -type f ! -name '.gitignore' ! -name '.gitkeep' -delete || true
           rm -f .env .env.backup .env.production
 
       - name: Upload build artifact
@@ -115,18 +133,16 @@ jobs:
             local-dir: ./app/
             server-dir: /public_html/backend/
             exclude: |
-              **/.git*
-              **/.git*/**
+              **/.git
+              **/.git/**
               **/node_modules/**
-              **/.env*
+              **/.env
+              **/.env.*
               **/tests/**
               **/.phpunit.cache
               **/.phpunit.result.cache
               **/.github/**
-              **/storage/logs/*
-              **/storage/framework/cache/data/*
-              **/storage/framework/sessions/*
-              **/storage/framework/views/*
+              **/storage/logs/*.log
               **/storage/framework/testing/**
               **/.idea/**
               **/.vscode/**
@@ -158,8 +174,8 @@ jobs:
             local-dir: ./app/public/
             server-dir: /public_html/
             exclude: |
-              **/.git*
-              **/.git*/**
+              **/.git
+              **/.git/**
 
   deploy-vendor:
     needs: build
@@ -190,8 +206,8 @@ jobs:
             local-dir: ./app/vendor/
             server-dir: /public_html/backend/vendor/
             exclude: |
-              **/.git*
-              **/.git*/**
+              **/.git
+              **/.git/**
               **/tests/**
               **/Tests/**
               **/docs/**
