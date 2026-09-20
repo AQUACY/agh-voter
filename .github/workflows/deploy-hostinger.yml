@@ -1,0 +1,140 @@
+# Deploy Laravel to Hostinger shared hosting (voting.asesewagovhospital.com)
+#
+# Required GitHub Secrets (Settings → Secrets and variables → Actions):
+#   FTP_SERVER      e.g. ftp.hostinger.com  (or the host shown in hPanel → FTP Accounts)
+#   FTP_USERNAME    e.g. u341728749
+#   FTP_PASSWORD    FTP account password
+#   FTP_SERVER_DIR  e.g. /domains/voting.asesewagovhospital.com/laravel/
+#                   (trailing slash required)
+#
+# Optional (recommended — Hostinger Business SSH):
+#   SSH_HOST        e.g. ssh.hostinger.com
+#   SSH_USERNAME    same as FTP username (u341728749)
+#   SSH_PASSWORD    or use SSH_PRIVATE_KEY instead
+#   SSH_PRIVATE_KEY private key PEM (preferred over password)
+#   SSH_APP_DIR     absolute path on server, e.g.
+#                   /home/u341728749/domains/voting.asesewagovhospital.com/laravel
+#
+# One-time Hostinger setup:
+#   1. Create FTP_SERVER_DIR on the server (empty laravel/ folder).
+#   2. In hPanel → Websites → voting.asesewagovhospital.com →
+#      change document root / website root to:  laravel/public
+#      (so public_html is no longer the web root), OR symlink:
+#        rm -rf public_html && ln -s laravel/public public_html
+#   3. Upload a production .env into laravel/ on the server once
+#      (this workflow never overwrites .env).
+#   4. Set PHP 8.3+ for the domain in hPanel.
+
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, json, bcmath, fileinfo, pdo, pdo_mysql, tokenizer, curl, zip, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Prepare deploy tree
+        run: |
+          # Keep storage structure but do not wipe live logs/uploads on sync.
+          mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
+          touch storage/logs/.gitkeep
+          # Never ship local env files
+          rm -f .env .env.backup .env.production
+
+      - name: Upload to Hostinger (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./
+          server-dir: /public_html/backend/
+          # server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.cursor/**
+            **/.agents/**
+            **/node_modules/**
+            **/tests/**
+            **/phpunit.xml
+            **/.phpunit.result.cache
+            **/.env
+            **/.env.*
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/storage/app/private/**
+            **/storage/pail/**
+            **/laravel-tmp/**
+            **/design-system/**
+            **/scripts/**
+            **/.editorconfig
+            **/.npmrc
+            **/README.md
+            **/CLAUDE.md
+            **/AGENTS.md
+            **/skills-lock.json
+            **/package-lock.json
+            **/vite.config.js
+
+      - name: Post-deploy Artisan (SSH)
+        if: ${{ secrets.SSH_HOST != '' && secrets.SSH_APP_DIR != '' }}
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            cd "${{ secrets.SSH_APP_DIR }}"
+            php artisan migrate --force
+            php artisan storage:link || true
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan event:cache || true
+            echo "Deploy finished at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
