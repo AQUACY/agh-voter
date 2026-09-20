@@ -1,0 +1,228 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'Cormorant', ui-serif, Georgia, serif;
+    --color-ink: #0c0a09;
+    --color-forest: #14261f;
+    --color-forest-deep: #0b1612;
+    --color-gold: #a16207;
+    --color-ivory: #f6f1e8;
+    --color-paper: #fffcf7;
+    --color-muted: #44403c;
+    --color-line: #d6d3d1;
+}
+
+:root {
+    --ink: #0c0a09;
+    --forest: #14261f;
+    --forest-deep: #0b1612;
+    --gold: #a16207;
+    --ivory: #f6f1e8;
+    --paper: #fffcf7;
+    --muted: #44403c;
+    --line: #d6d3d1;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+    font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+}
+
+body {
+    background:
+        radial-gradient(1200px 480px at 10% -10%, rgba(161, 98, 7, 0.08), transparent 55%),
+        radial-gradient(900px 420px at 110% 0%, rgba(20, 38, 31, 0.08), transparent 50%),
+        var(--ivory);
+    color: var(--ink);
+    line-height: 1.6;
+}
+
+.display {
+    font-family: Cormorant, ui-serif, Georgia, serif;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+.kicker {
+    color: var(--gold);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.lede {
+    max-width: 38rem;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.gold-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.panel {
+    background: color-mix(in srgb, var(--paper) 92%, white);
+    border: 1px solid color-mix(in srgb, var(--gold) 22%, var(--line));
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.7) inset,
+        0 24px 60px -36px rgba(12, 10, 9, 0.35);
+}
+
+.ballot-mark {
+    opacity: 0;
+    transition: opacity 200ms var(--ease);
+}
+
+label:has(input:checked) .ballot-mark,
+.ballot-yesno[data-choice="yes"] .ballot-mark {
+    opacity: 1;
+}
+
+.label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.field {
+    min-height: 48px;
+    width: 100%;
+    border-radius: 1rem;
+    background: #f3eee4;
+    padding: 0.85rem 1rem;
+    outline: none;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 28%, transparent);
+}
+
+.field:focus-visible,
+.btn:focus-visible,
+a:focus-visible,
+button:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+}
+
+.btn {
+    display: inline-flex;
+    min-height: 48px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.75rem 1.35rem;
+    font-size: 0.92rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: background-color 200ms var(--ease), color 200ms var(--ease), box-shadow 200ms var(--ease), transform 200ms var(--ease);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn:disabled,
+.btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.btn-primary {
+    background: var(--forest);
+    color: var(--ivory);
+}
+
+.btn-primary:hover {
+    background: var(--forest-deep);
+}
+
+.btn-secondary {
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 35%, var(--line));
+}
+
+.btn-danger {
+    background: #991b1b;
+    color: #fff;
+}
+
+.btn-gold {
+    background: var(--gold);
+    color: #fff;
+}
+
+.skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3rem;
+    z-index: 100;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--ivory);
+    padding: 0.6rem 1rem;
+}
+
+.skip-link:focus {
+    top: 1rem;
+}
+
+.site-header {
+    background: var(--forest-deep);
+    color: var(--ivory);
+}
+
+.nav-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    color: #e7e5e4;
+    transition: color 180ms var(--ease);
+}
+
+.nav-link:hover {
+    color: #fde68a;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@media print {
+    header,
+    nav,
+    form,
+    .no-print,
+    .skip-link {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+    }
+
+    main {
+        max-width: none;
+        padding: 0;
+    }
+}

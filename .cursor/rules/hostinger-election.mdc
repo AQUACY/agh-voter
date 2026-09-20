@@ -1,0 +1,15 @@
+---
+description: Hostinger Business shared hosting constraints for the AGH welfare election app
+alwaysApply: true
+---
+
+# Hostinger shared hosting
+
+This app deploys to Hostinger Business shared hosting (PHP 8.3, MySQL), not a VPS.
+
+- Backend is Laravel/PHP. Do not introduce Node.js APIs, Knex, Redis, queues, workers, Docker, PM2, or Socket.IO.
+- `QUEUE_CONNECTION=sync`, `SESSION_DRIVER=database`, `CACHE_STORE=database`.
+- SMS is synchronous via `SmsService::sendOtp()` and `SMS_PROVIDER` (`log`, `arkesel`, `hubtel`).
+- Live EC results use HTTP polling of `GET /api/v1/admin/results/live` every 5 seconds. That route is EC-auth only.
+- Hash OTPs, never return OTPs or full phone numbers from the API, mask phones as `024****1234`.
+- Use database transactions for OTP issue/verify and ballot casting. Votes must not store `voter_id`.
