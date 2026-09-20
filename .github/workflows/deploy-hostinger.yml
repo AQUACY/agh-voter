@@ -1,31 +1,22 @@
 # Deploy Laravel to Hostinger shared hosting (voting.asesewagovhospital.com)
 #
-# Required GitHub Secrets (Settings → Secrets and variables → Actions):
-#   FTP_SERVER      e.g. ftp.hostinger.com  (or the host shown in hPanel → FTP Accounts)
-#   FTP_USERNAME    e.g. u341728749
-#   FTP_PASSWORD    FTP account password
-#   FTP_SERVER_DIR  e.g. /domains/voting.asesewagovhospital.com/laravel/
-#                   (trailing slash required)
+# Separates Laravel core (/public_html/backend) from public files (/public_html).
+# No SSH — FTPS only. Vendor is a separate long-running job.
 #
-# Optional (recommended — Hostinger Business SSH):
-#   SSH_HOST        e.g. ssh.hostinger.com
-#   SSH_USERNAME    same as FTP username (u341728749)
-#   SSH_PASSWORD    or use SSH_PRIVATE_KEY instead
-#   SSH_PRIVATE_KEY private key PEM (preferred over password)
-#   SSH_APP_DIR     absolute path on server, e.g.
-#                   /home/u341728749/domains/voting.asesewagovhospital.com/laravel
+# Required GitHub Secrets:
+#   FTP_SERVER
+#   FTP_USERNAME
+#   FTP_PASSWORD
+#   FTP_PORT          (optional, defaults to 21)
 #
-# One-time Hostinger setup:
-#   1. Create FTP_SERVER_DIR on the server (empty laravel/ folder).
-#   2. In hPanel → Websites → voting.asesewagovhospital.com →
-#      change document root / website root to:  laravel/public
-#      (so public_html is no longer the web root), OR symlink:
-#        rm -rf public_html && ln -s laravel/public public_html
-#   3. Upload a production .env into laravel/ on the server once
-#      (this workflow never overwrites .env).
-#   4. Set PHP 8.3+ for the domain in hPanel.
+# One-time on the server:
+#   1. Place production .env in /public_html/backend/.env
+#   2. chmod -R 775 /public_html/backend/storage /public_html/backend/bootstrap/cache
+#   3. Ensure PHP 8.3+ for voting.asesewagovhospital.com
+#   4. Create storage link if needed:
+#      public_html/storage -> backend/storage/app/public
 
-name: Deploy to Hostinger
+name: Deploy Voting App to Hostinger
 
 on:
   push:
@@ -35,24 +26,22 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-hostinger
-  cancel-in-progress: true
+  group: voting-hostinger-deploy
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build and deploy
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    timeout-minutes: 20
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, xml, ctype, json, bcmath, fileinfo, pdo, pdo_mysql, tokenizer, curl, zip, gd
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, fileinfo, mysql, pdo_mysql
           coverage: none
           tools: composer:v2
 
@@ -63,7 +52,7 @@ jobs:
           cache: npm
 
       - name: Install Composer dependencies
-        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Install npm dependencies
         run: npm ci
@@ -71,69 +60,170 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Prepare deploy tree
+      - name: Prepare storage folders
         run: |
-          # Keep storage structure but do not wipe live logs/uploads on sync.
           mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
           touch storage/logs/.gitkeep
-          # Never ship local env files
           rm -f .env .env.backup .env.production
 
-      - name: Upload to Hostinger (FTPS)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: ./
-          server-dir: /public_html/backend/
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/.cursor/**
-            **/.agents/**
-            **/node_modules/**
-            **/tests/**
-            **/phpunit.xml
-            **/.phpunit.result.cache
-            **/.env
-            **/.env.*
-            **/storage/logs/**
-            **/storage/framework/cache/**
-            **/storage/framework/sessions/**
-            **/storage/framework/views/**
-            **/storage/app/private/**
-            **/storage/pail/**
-            **/laravel-tmp/**
-            **/design-system/**
-            **/scripts/**
-            **/.editorconfig
-            **/.npmrc
-            **/README.md
-            **/CLAUDE.md
-            **/AGENTS.md
-            **/skills-lock.json
-            **/package-lock.json
-            **/vite.config.js
+          name: voting-hostinger-build
+          path: |
+            app
+            bootstrap
+            config
+            database
+            public
+            resources
+            routes
+            storage
+            vendor
+            artisan
+            composer.json
+            composer.lock
+          retention-days: 1
+          if-no-files-found: error
 
-      - name: Post-deploy Artisan (SSH)
-        if: ${{ secrets.SSH_HOST != '' }}
-        uses: appleboy/ssh-action@v1.2.0
+  deploy-app:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script_stop: true
-          script: |
-            cd "${{ secrets.SSH_APP_DIR }}"
-            php artisan migrate --force
-            php artisan storage:link || true
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            php artisan event:cache || true
-            echo "Deploy finished at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          name: voting-hostinger-build
+          path: app
+
+      - name: Deploy Laravel core files to /backend
+        uses: Wandalen/wretry.action@v3.5.0
+        with:
+          action: SamKirkland/FTP-Deploy-Action@v4.3.6
+          attempt_limit: 5
+          attempt_delay: 30000
+          with: |
+            server: ${{ secrets.FTP_SERVER }}
+            username: ${{ secrets.FTP_USERNAME }}
+            password: ${{ secrets.FTP_PASSWORD }}
+            protocol: ftps
+            port: ${{ secrets.FTP_PORT || 21 }}
+            timeout: 300000
+            log-level: standard
+            state-name: .ftp-deploy-sync-state-app.json
+            local-dir: ./app/
+            server-dir: /public_html/backend/
+            exclude: |
+              **/.git*
+              **/.git*/**
+              **/node_modules/**
+              **/.env*
+              **/tests/**
+              **/.phpunit.cache
+              **/.phpunit.result.cache
+              **/.github/**
+              **/storage/logs/*
+              **/storage/framework/cache/data/*
+              **/storage/framework/sessions/*
+              **/storage/framework/views/*
+              **/storage/framework/testing/**
+              **/.idea/**
+              **/.vscode/**
+              **/phpunit.xml
+              **/Homestead.json
+              **/Homestead.yaml
+              **/auth.json
+              **/package.json
+              **/package-lock.json
+              **/vite.config.js
+              **/public/**
+              **/vendor/**
+
+      - name: Deploy public folder to /public_html/
+        uses: Wandalen/wretry.action@v3.5.0
+        with:
+          action: SamKirkland/FTP-Deploy-Action@v4.3.6
+          attempt_limit: 5
+          attempt_delay: 30000
+          with: |
+            server: ${{ secrets.FTP_SERVER }}
+            username: ${{ secrets.FTP_USERNAME }}
+            password: ${{ secrets.FTP_PASSWORD }}
+            protocol: ftps
+            port: ${{ secrets.FTP_PORT || 21 }}
+            timeout: 300000
+            log-level: standard
+            state-name: .ftp-deploy-sync-state-public.json
+            local-dir: ./app/public/
+            server-dir: /public_html/
+            exclude: |
+              **/.git*
+              **/.git*/**
+
+  deploy-vendor:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: voting-hostinger-build
+          path: app
+
+      - name: Deploy Composer vendor to /backend/vendor
+        uses: Wandalen/wretry.action@v3.5.0
+        with:
+          action: SamKirkland/FTP-Deploy-Action@v4.3.6
+          attempt_limit: 5
+          attempt_delay: 60000
+          with: |
+            server: ${{ secrets.FTP_SERVER }}
+            username: ${{ secrets.FTP_USERNAME }}
+            password: ${{ secrets.FTP_PASSWORD }}
+            protocol: ftps
+            port: ${{ secrets.FTP_PORT || 21 }}
+            timeout: 300000
+            log-level: minimal
+            state-name: .ftp-deploy-sync-state-vendor.json
+            local-dir: ./app/vendor/
+            server-dir: /public_html/backend/vendor/
+            exclude: |
+              **/.git*
+              **/.git*/**
+              **/tests/**
+              **/Tests/**
+              **/docs/**
+              **/doc/**
+              **/examples/**
+              **/example/**
+              **/phpunit.xml*
+              **/.github/**
+
+  deploy-summary:
+    needs:
+      - deploy-app
+      - deploy-vendor
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Deployment summary
+        run: |
+          if [ "${{ needs.deploy-app.result }}" != "success" ] || [ "${{ needs.deploy-vendor.result }}" != "success" ]; then
+            echo "Deployment did not fully succeed."
+            echo "deploy-app: ${{ needs.deploy-app.result }}"
+            echo "deploy-vendor: ${{ needs.deploy-vendor.result }}"
+            exit 1
+          fi
+          echo "Deployment completed successfully!"
+          echo ""
+          echo "Laravel core files deployed to: /public_html/backend/"
+          echo "Composer vendor deployed to: /public_html/backend/vendor/"
+          echo "Public files deployed to: /public_html/"
+          echo ""
+          echo "Post-deployment checklist:"
+          echo "  1. Ensure .env exists in /public_html/backend/"
+          echo "  2. chmod -R 775 /public_html/backend/storage /public_html/backend/bootstrap/cache"
+          echo "  3. Link storage if needed: public_html/storage -> backend/storage/app/public"
+          echo "  4. Run migrations once (hPanel cron or temporary route): php artisan migrate --force"
