@@ -31,15 +31,28 @@
         .row-yesno { flex: 1; display: flex; flex-direction: column; min-height: 0; border-bottom: 1.5px solid #111; }
         .row-yesno:last-child { border-bottom: 0; }
         .row-yesno .photo-cell { border-right: 0; border-bottom: 1.25px solid #111; padding-bottom: 3mm; }
-        .row-yesno .photo-cell img, .row-yesno .photo-cell .placeholder { max-width: 58mm; height: 58mm; }
+        .row-yesno .photo-cell img, .row-yesno .photo-cell .placeholder {
+            width: 48mm;
+            height: 64mm;
+            max-width: 90%;
+        }
         .yesno-stamps { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
         .yesno-stamps .stamp-cell + .stamp-cell { border-left: 1.25px solid #111; }
         .yesno-stamps .stamp { max-height: 42mm; height: 78%; }
-        .photo-cell { padding: 3.2mm 3mm 2.6mm; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1.25px solid #111; }
-        .photo-cell img, .photo-cell .placeholder { width: 100%; max-width: 42mm; object-fit: cover; object-position: center 15%; border: 1.4px solid #111; background: #f4f4f4; display: block; }
-        .col[data-count="1"] .photo-cell img, .col[data-count="1"] .placeholder { max-width: 58mm; height: 68mm; }
-        .col[data-count="2"] .photo-cell img, .col[data-count="2"] .placeholder { height: 38mm; }
-        .col[data-count="3"] .photo-cell img, .col[data-count="3"] .placeholder { height: 28mm; }
+        .photo-cell { padding: 3.2mm 3mm 2.6mm; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1.25px solid #111; min-width: 0; }
+        .photo-cell img, .photo-cell .placeholder {
+            width: 36mm;
+            height: 48mm;
+            max-width: 100%;
+            object-fit: cover;
+            object-position: center 22%;
+            border: 1.4px solid #111;
+            background: #f4f4f4;
+            display: block;
+        }
+        .col[data-count="1"] .photo-cell img, .col[data-count="1"] .placeholder { width: 48mm; height: 64mm; }
+        .col[data-count="2"] .photo-cell img, .col[data-count="2"] .placeholder { width: 40mm; height: 53mm; }
+        .col[data-count="3"] .photo-cell img, .col[data-count="3"] .placeholder { width: 34mm; height: 45mm; }
         .placeholder { display: flex; align-items: center; justify-content: center; font-weight: 700; letter-spacing: .08em; color: #666; }
         .candidate-name { margin: 2.2mm 0 0; font-family: "Libre Baskerville", serif; font-size: 11pt; font-weight: 700; line-height: 1.2; }
         .stamp-cell { display: flex; align-items: center; justify-content: center; padding: 3mm; }
@@ -47,7 +60,12 @@
         .col[data-count="1"] .stamp { max-height: 68mm; }
         .stamp svg { width: 22mm; height: 22mm; opacity: .26; }
         .stamp span { margin-top: 2.5mm; font-size: 7pt; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #666; }
-        footer.sheet-foot { margin-top: 3mm; display: flex; justify-content: space-between; font-size: 7.5pt; letter-spacing: .14em; text-transform: uppercase; color: #666; }
+        footer.sheet-foot { margin-top: 3mm; display: flex; justify-content: space-between; align-items: end; font-size: 7.5pt; letter-spacing: .14em; text-transform: uppercase; color: #666; }
+        .sheet-serial { display: flex; align-items: center; gap: 3mm; text-transform: none; letter-spacing: 0; }
+        .sheet-serial img { width: 18mm; height: 18mm; display: block; }
+        .sheet-serial .serial-meta { line-height: 1.25; }
+        .sheet-serial .serial-label { display: block; font-size: 6.5pt; letter-spacing: .16em; text-transform: uppercase; color: #888; }
+        .sheet-serial .serial-code { display: block; margin-top: 1mm; font-family: "Source Sans 3", sans-serif; font-size: 10pt; font-weight: 700; letter-spacing: .12em; color: #111; }
         @page { size: A4 portrait; margin: 6mm; }
         @media print {
             html, body { background: #fff; }
@@ -61,14 +79,20 @@
     @php
         $autoPrint = $autoPrint ?? false;
         $issuedTo = $issuedTo ?? null;
-        $issuedStaffId = $issuedStaffId ?? null;
+        $paperSerial = $paperSerial ?? null;
+        $serialDisplay = $paperSerial ? \App\Models\PaperBallotSerial::format($paperSerial) : null;
+        $qrUri = $paperSerial ? \App\Support\QrSvg::dataUri(\App\Models\PaperBallotSerial::normalize($paperSerial), 160) : null;
         $backUrl = $backUrl ?? route('ec.ballot');
     @endphp
     <div class="toolbar no-print">
         @if ($issuedTo)
             <div>
                 <strong>Printing for {{ $issuedTo }}</strong>
-                <span> · {{ $issuedStaffId }} · Digital access is now closed</span>
+                @if ($serialDisplay)
+                    <span> · Sheet serial {{ $serialDisplay }} · Digital access is now closed</span>
+                @else
+                    <span> · Digital access is now closed</span>
+                @endif
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap">
                 <button type="button" onclick="window.print()">Print again</button>
@@ -169,6 +193,15 @@
 
             <footer class="sheet-foot">
                 <span>Secret paper ballot</span>
+                @if ($qrUri && $serialDisplay)
+                    <div class="sheet-serial">
+                        <img src="{{ $qrUri }}" alt="Ballot serial QR">
+                        <div class="serial-meta">
+                            <span class="serial-label">Ballot serial</span>
+                            <span class="serial-code">{{ $serialDisplay }}</span>
+                        </div>
+                    </div>
+                @endif
                 <span>Sheet {{ $loop->iteration }} of {{ $sheets->count() }}</span>
             </footer>
         </article>

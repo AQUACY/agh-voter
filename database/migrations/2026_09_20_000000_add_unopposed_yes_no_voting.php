@@ -125,15 +125,28 @@ return new class extends Migration
 
     private function hasIndex(string $table, string $indexName): bool
     {
-        $database = Schema::getConnection()->getDatabaseName();
+        $driver = Schema::getConnection()->getDriverName();
 
-        $row = DB::selectOne(
-            'select 1 as ok from information_schema.statistics
-             where table_schema = ? and table_name = ? and index_name = ?
-             limit 1',
-            [$database, $table, $indexName]
-        );
+        if ($driver === 'sqlite') {
+            $indexes = DB::select("pragma index_list('{$table}')");
 
-        return $row !== null;
+            foreach ($indexes as $index) {
+                if (($index->name ?? null) === $indexName) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        $indexes = Schema::getIndexes($table);
+
+        foreach ($indexes as $index) {
+            if (($index['name'] ?? null) === $indexName) {
+                return true;
+            }
+        }
+
+        return false;
     }
 };

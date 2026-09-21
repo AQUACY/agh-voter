@@ -6,13 +6,19 @@ use App\Exceptions\ElectionSetupException;
 use App\Models\AuditLog;
 use App\Models\Election;
 use App\Models\ManualTally;
+use App\Models\PaperBallotSerial;
 use App\Models\Voter;
 use App\Support\UnopposedVoting;
 use Illuminate\Support\Facades\DB;
 
 class ManualBallotService
 {
-    public function lockPaperVote(Voter $voter, string $actorType = 'ec'): Voter
+    /**
+     * Lock digital voting for a paper ballot and issue an opaque sheet serial.
+     *
+     * @return array{0: Voter, 1: PaperBallotSerial}
+     */
+    public function lockPaperVote(Voter $voter, string $actorType = 'ec'): array
     {
         if ($voter->election->isPublished()) {
             throw new ElectionSetupException('Published results cannot change.');
@@ -31,12 +37,35 @@ class ManualBallotService
                 'vote_channel' => 'manual',
             ]);
 
-            AuditLog::record('voter_voted_manual', $actorType, $actorType === 'ec' ? auth()->id() : $locked->id, [
-                'staff_id' => $locked->staff_id,
+            $serial = PaperBallotSerial::query()->create([
+                'election_id' => $locked->election_id,
+                'voter_id' => $locked->id,
+                'serial' => PaperBallotSerial::generateUnique(),
+                'issued_at' => now(),
             ]);
 
-            return $locked->fresh();
+            AuditLog::record('voter_voted_manual', $actorType, $actorType === 'ec' ? auth()->id() : $locked->id, [
+                'staff_id' => $locked->staff_id,
+                'paper_serial' => $serial->serial,
+            ]);
+
+            return [$locked->fresh(), $serial];
         });
+    }
+
+    public function findBySerial(Election $election, string $serial): ?PaperBallotSerial
+    {
+        $normalized = PaperBallotSerial::normalize($serial);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return PaperBallotSerial::query()
+            ->with('voter')
+            ->where('election_id', $election->id)
+            ->where('serial', $normalized)
+            ->first();
     }
 
     /**

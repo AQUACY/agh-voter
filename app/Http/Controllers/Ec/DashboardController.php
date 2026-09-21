@@ -86,14 +86,21 @@ class DashboardController extends Controller
 
         if ($election && $request->filled('q')) {
             $term = '%'.trim((string) $request->string('q')).'%';
-            $query->where(function ($builder) use ($term) {
+            $normalized = \App\Models\PaperBallotSerial::normalize((string) $request->string('q'));
+            $query->where(function ($builder) use ($term, $normalized) {
                 $builder->where('staff_id', 'like', $term)->orWhere('name', 'like', $term);
+                if ($normalized !== '') {
+                    $builder->orWhereHas('paperBallotSerial', function ($serialQuery) use ($normalized, $term) {
+                        $serialQuery->where('serial', 'like', '%'.$normalized.'%')
+                            ->orWhere('serial', 'like', $term);
+                    });
+                }
             });
         }
 
         return view('ec.voters', [
             'election' => $election,
-            'voters' => $query ? $query->paginate(50)->withQueryString() : collect(),
+            'voters' => $query ? $query->with('paperBallotSerial')->paginate(50)->withQueryString() : collect(),
             'q' => (string) $request->string('q'),
         ]);
     }
@@ -218,15 +225,38 @@ class DashboardController extends Controller
         return back()->with('status', "Imported {$imported} voter(s).");
     }
 
-    public function markPaperVote(Voter $voter, ManualBallotService $manual): RedirectResponse
+    public function markPaperVote(Request $request, Voter $voter, ManualBallotService $manual): RedirectResponse
     {
         try {
-            $manual->lockPaperVote($voter);
+            [, $serial] = $manual->lockPaperVote($voter);
         } catch (ElectionSetupException $e) {
             return back()->withErrors(['voters' => $e->getMessage()]);
         }
 
-        return back()->with('status', $voter->name.' is locked after a paper ballot.');
+        $request->session()->put('paper_print', true);
+        $request->session()->put('paper_staff_name', $voter->name);
+        $request->session()->put('paper_serial', $serial->serial);
+
+        return redirect()->route('voter.paper.print');
+    }
+
+    public function lookupSerial(Request $request, ManualBallotService $manual): View|RedirectResponse
+    {
+        $election = Election::current();
+
+        if (! $election) {
+            return redirect()->route('ec.dashboard');
+        }
+
+        $serial = trim((string) $request->string('serial'));
+        $match = $serial !== '' ? $manual->findBySerial($election, $serial) : null;
+
+        return view('ec.serial-lookup', [
+            'election' => $election,
+            'serial' => $serial,
+            'match' => $match,
+            'searched' => $request->filled('serial'),
+        ]);
     }
 
     public function template(): Response

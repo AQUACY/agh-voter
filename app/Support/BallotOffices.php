@@ -6,6 +6,7 @@ use App\Models\BallotReceipt;
 use App\Models\Candidate;
 use App\Models\Election;
 use App\Models\ManualTally;
+use App\Models\PaperBallotSerial;
 use App\Models\Position;
 use App\Models\Vote;
 use App\Models\Voter;
@@ -49,6 +50,7 @@ class BallotOffices
     {
         Vote::query()->where('election_id', $election->id)->delete();
         BallotReceipt::query()->where('election_id', $election->id)->delete();
+        PaperBallotSerial::query()->where('election_id', $election->id)->delete();
         ManualTally::query()->where('election_id', $election->id)->delete();
         Candidate::query()->whereIn('position_id', $election->positions()->select('id'))->delete();
         $election->positions()->delete();

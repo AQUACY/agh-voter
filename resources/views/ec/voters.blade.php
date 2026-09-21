@@ -7,13 +7,16 @@
     <div>
         <p class="kicker">Register</p>
         <h1 class="display mt-2 text-5xl font-semibold text-[var(--ink)]">Registered voters</h1>
-        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Paper ballots are issued at the desk after Staff ID and SMS. Choosing paper prints the sheets and immediately closes online voting. Use Paper vote here only if a sheet was handed out without that desk flow.</p>
+        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Paper ballots are issued at the desk after Staff ID and SMS. Choosing paper prints the sheets with a QR serial (not the Staff ID) and closes online voting. Use Paper vote here only if a sheet was handed out without that desk flow. EC officers can resolve a serial under Serial lookup.</p>
     </div>
-    <a class="text-sm text-[#12352c] underline-offset-4 hover:underline" href="{{ route('ec.voters.template') }}">Download CSV template</a>
+    <div class="flex flex-wrap gap-3">
+        <a class="text-sm text-[#12352c] underline-offset-4 hover:underline" href="{{ route('ec.serials') }}">Serial lookup</a>
+        <a class="text-sm text-[#12352c] underline-offset-4 hover:underline" href="{{ route('ec.voters.template') }}">Download CSV template</a>
+    </div>
 </div>
 
 <form method="GET" action="{{ route('ec.voters') }}" class="mb-5 flex gap-2">
-    <input name="q" value="{{ $q }}" placeholder="Search Staff ID or name" class="flex-1 rounded-2xl bg-[#fffaf2] px-3 py-2 ring-1 ring-[#c4a35a]/20">
+    <input name="q" value="{{ $q }}" placeholder="Search Staff ID, name, or ballot serial" class="flex-1 rounded-2xl bg-[#fffaf2] px-3 py-2 ring-1 ring-[#c4a35a]/20">
     <button class="rounded-full bg-white px-4 py-2 ring-1 ring-[#c4a35a]/30">Search</button>
 </form>
 
@@ -47,6 +50,7 @@
                 <th class="px-4 py-3">Name</th>
                 <th class="px-4 py-3">Phone</th>
                 <th class="px-4 py-3">Ballot</th>
+                <th class="px-4 py-3">Serial</th>
                 <th class="px-4 py-3 no-print"></th>
             </tr>
         </thead>
@@ -57,10 +61,11 @@
                     <td class="px-4 py-3">{{ $voter->name }}</td>
                     <td class="px-4 py-3">{{ $voter->maskedPhone() }}</td>
                     <td class="px-4 py-3">{{ $voter->voteChannelLabel() }}</td>
+                    <td class="px-4 py-3 font-mono tracking-wider">{{ $voter->paperBallotSerial?->formatted() ?? '—' }}</td>
                     <td class="px-4 py-3 no-print">
                         <div class="flex flex-wrap gap-3">
                             @if (! $voter->hasVoted() && $election && ! $election->isPublished())
-                                <form method="POST" action="{{ route('ec.voters.paper', $voter) }}" onsubmit="return confirm('Record a paper ballot for {{ $voter->name }} ({{ $voter->staff_id }})? This locks the digital ballot.')">
+                                <form method="POST" action="{{ route('ec.voters.paper', $voter) }}" onsubmit="return confirm('Issue a paper ballot for {{ $voter->name }} ({{ $voter->staff_id }})? This locks the digital ballot and prints a QR serial sheet.')">
                                     @csrf
                                     <button class="text-[#12352c]">Paper vote</button>
                                 </form>
@@ -76,7 +81,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td class="px-4 py-6 text-[#6b6254]" colspan="5">No voters yet.</td></tr>
+                <tr><td class="px-4 py-6 text-[#6b6254]" colspan="6">No voters yet.</td></tr>
             @endforelse
         </tbody>
     </table>

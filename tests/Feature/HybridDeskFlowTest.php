@@ -70,7 +70,13 @@ class HybridDeskFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Secret paper ballot')
             ->assertSee('Digital access is now closed')
-            ->assertSee('Printing for '.$voter->name);
+            ->assertSee('Printing for '.$voter->name)
+            ->assertSee('Ballot serial')
+            ->assertDontSee($voter->staff_id);
+
+        $this->assertDatabaseHas('paper_ballot_serials', [
+            'voter_id' => $voter->id,
+        ]);
 
         $this->postJson('/api/v1/auth/otp/request', ['staff_id' => $voter->staff_id])
             ->assertStatus(403);

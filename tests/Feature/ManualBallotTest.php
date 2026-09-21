@@ -24,13 +24,61 @@ class ManualBallotTest extends TestCase
 
         $this->actingAs($ec)
             ->post('/ec/voters/'.$voter->id.'/paper')
-            ->assertRedirect();
+            ->assertRedirect(route('voter.paper.print'));
 
         $this->assertSame('manual', $voter->fresh()->vote_channel);
         $this->assertNotNull($voter->fresh()->voted_at);
+        $this->assertDatabaseHas('paper_ballot_serials', [
+            'voter_id' => $voter->id,
+            'election_id' => $election->id,
+        ]);
 
         $this->postJson('/api/v1/auth/otp/request', ['staff_id' => $voter->staff_id])
             ->assertStatus(403);
+    }
+
+    public function test_ec_can_resolve_paper_serial_to_staff_id(): void
+    {
+        [$ec, $election] = $this->setupElection();
+        $voter = $election->voters()->first();
+
+        $this->actingAs($ec)->post('/ec/voters/'.$voter->id.'/paper');
+
+        $serial = $voter->fresh()->paperBallotSerial->serial;
+        $formatted = $voter->fresh()->paperBallotSerial->formatted();
+
+        $this->actingAs($ec)
+            ->get('/ec/serials?serial='.urlencode($formatted))
+            ->assertOk()
+            ->assertSee($voter->staff_id)
+            ->assertSee($voter->name)
+            ->assertDontSee('No paper ballot serial matches');
+
+        $this->actingAs($ec)
+            ->get('/ec/serials?serial=NOTAREALSERIAL')
+            ->assertOk()
+            ->assertSee('No paper ballot serial matches');
+
+        $this->post('/ec/logout');
+
+        $this->get('/ec/serials?serial='.$serial)
+            ->assertRedirect(route('ec.login'));
+    }
+
+    public function test_printed_paper_ballot_shows_qr_serial_not_staff_id(): void
+    {
+        [$ec, $election] = $this->setupElection();
+        $voter = $election->voters()->first();
+
+        $this->actingAs($ec)->post('/ec/voters/'.$voter->id.'/paper');
+        $serial = $voter->fresh()->paperBallotSerial->formatted();
+
+        $this->get('/paper/print')
+            ->assertOk()
+            ->assertSee('Ballot serial')
+            ->assertSee($serial)
+            ->assertSee('data:image/svg+xml;base64,', false)
+            ->assertDontSee($voter->staff_id);
     }
 
     public function test_paper_counts_and_publish_are_required_for_public_results(): void

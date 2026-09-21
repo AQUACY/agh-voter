@@ -30,6 +30,7 @@
                     <a class="nav-link" href="{{ route('ec.ballot') }}">Ballot</a>
                     <a class="nav-link" href="{{ route('ec.ballot.print') }}">Print</a>
                     <a class="nav-link" href="{{ route('ec.voters') }}">Voters</a>
+                    <a class="nav-link" href="{{ route('ec.serials') }}">Serials</a>
                     <a class="nav-link" href="{{ route('ec.tally') }}">Paper count</a>
                     <a class="nav-link" href="{{ route('ec.settings') }}">Election</a>
                     <a class="nav-link" href="{{ route('ec.audit') }}">Audit</a>

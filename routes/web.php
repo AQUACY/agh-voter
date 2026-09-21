@@ -69,6 +69,7 @@ Route::prefix('ec')->group(function () {
         Route::delete('/voters/{voter}', [DashboardController::class, 'destroyVoter'])->name('ec.voters.destroy');
         Route::post('/voters/import', [DashboardController::class, 'importVoters'])->name('ec.voters.import');
         Route::get('/voters/template', [DashboardController::class, 'template'])->name('ec.voters.template');
+        Route::get('/serials', [DashboardController::class, 'lookupSerial'])->name('ec.serials');
         Route::get('/audit', [DashboardController::class, 'audit'])->name('ec.audit');
     });
 });

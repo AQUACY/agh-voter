@@ -6,6 +6,7 @@ use App\Support\GhanaPhone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Voter extends Model
 {
@@ -41,6 +42,11 @@ class Voter extends Model
     public function otpChallenges(): HasMany
     {
         return $this->hasMany(OtpChallenge::class);
+    }
+
+    public function paperBallotSerial(): HasOne
+    {
+        return $this->hasOne(PaperBallotSerial::class);
     }
 
     public function hasVoted(): bool

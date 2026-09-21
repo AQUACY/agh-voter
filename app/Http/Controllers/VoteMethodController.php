@@ -54,7 +54,7 @@ class VoteMethodController extends Controller
         }
 
         try {
-            $manual->lockPaperVote($voter, 'voter');
+            [, $serial] = $manual->lockPaperVote($voter, 'voter');
         } catch (ElectionSetupException $e) {
             if ($this->wantsJson($request)) {
                 return response()->json(['message' => $e->getMessage()], 403);
@@ -66,13 +66,14 @@ class VoteMethodController extends Controller
         $request->session()->forget(['voter_id', 'vote_method']);
         $request->session()->put('paper_print', true);
         $request->session()->put('paper_staff_name', $voter->name);
-        $request->session()->put('paper_staff_id', $voter->staff_id);
+        $request->session()->put('paper_serial', $serial->serial);
 
         if ($this->wantsJson($request)) {
             return response()->json([
                 'ok' => true,
                 'method' => 'manual',
                 'print' => url('/paper/print'),
+                'serial' => $serial->formatted(),
             ]);
         }
 
@@ -98,7 +99,7 @@ class VoteMethodController extends Controller
             'sheets' => $election->positions->chunk(2)->values(),
             'autoPrint' => true,
             'issuedTo' => $request->session()->get('paper_staff_name'),
-            'issuedStaffId' => $request->session()->get('paper_staff_id'),
+            'paperSerial' => $request->session()->get('paper_serial'),
             'backUrl' => route('voter.paper.done'),
         ]);
     }
@@ -110,12 +111,12 @@ class VoteMethodController extends Controller
         }
 
         $name = $request->session()->get('paper_staff_name');
-        $staffId = $request->session()->get('paper_staff_id');
-        $request->session()->forget(['paper_print', 'paper_staff_name', 'paper_staff_id']);
+        $serial = $request->session()->get('paper_serial');
+        $request->session()->forget(['paper_print', 'paper_staff_name', 'paper_serial']);
 
         return view('voter.paper-done', [
             'staffName' => $name,
-            'staffId' => $staffId,
+            'paperSerial' => $serial,
         ]);
     }
 

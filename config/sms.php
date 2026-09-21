@@ -2,7 +2,7 @@
 
 return [
     /*
-    | SMS_PROVIDER: log | arkesel | hubtel
+    | SMS_PROVIDER: log | arkesel | hubtel | splitsms
     | Switch providers without changing voting logic.
     */
     'provider' => env('SMS_PROVIDER', 'log'),
