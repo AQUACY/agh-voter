@@ -240,6 +240,5 @@ class UnopposedYesNoTest extends TestCase
             'staff_id' => $voter->staff_id,
             'otp' => $this->sms->otp,
         ])->assertOk();
-        $this->postJson('/api/v1/method/online')->assertOk();
     }
 }

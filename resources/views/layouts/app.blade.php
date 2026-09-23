@@ -34,6 +34,19 @@
                     <a class="nav-link" href="{{ route('ec.tally') }}">Paper count</a>
                     <a class="nav-link" href="{{ route('ec.settings') }}">Election</a>
                     <a class="nav-link" href="{{ route('ec.audit') }}">Audit</a>
+                    <a
+                        href="{{ route('ec.profile') }}"
+                        class="nav-account inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--gold)_45%,transparent)] bg-[color-mix(in_srgb,var(--forest)_55%,#000)] px-3 py-1.5 text-[#fffcf7] no-underline transition hover:border-[var(--gold)]"
+                        title="Change your password"
+                    >
+                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--gold)] text-[11px] font-semibold text-[#07140f]" aria-hidden="true">
+                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                        </span>
+                        <span class="leading-tight">
+                            <span class="block text-[11px] font-medium tracking-wide">{{ auth()->user()->name }}</span>
+                            <span class="block text-[10px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--gold)_85%,white)]">Change password</span>
+                        </span>
+                    </a>
                     <form method="POST" action="{{ route('ec.logout') }}">@csrf<button class="nav-link">Sign out</button></form>
                 @else
                     <a class="nav-link" href="{{ route('results.public') }}">Official results</a>

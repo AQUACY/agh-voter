@@ -7,7 +7,7 @@
     <div>
         <p class="kicker">Register</p>
         <h1 class="display mt-2 text-5xl font-semibold text-[var(--ink)]">Registered voters</h1>
-        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Paper ballots are issued at the desk after Staff ID and SMS. Choosing paper prints the sheets with a QR serial (not the Staff ID) and closes online voting. Use Paper vote here only if a sheet was handed out without that desk flow. EC officers can resolve a serial under Serial lookup.</p>
+        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Voters cast online after Staff ID and SMS. Use Paper vote here when the EC issues a printed sheet — that prints a QR serial (not the Staff ID) and closes online voting for that Staff ID. Resolve a serial under Serial lookup.</p>
     </div>
     <div class="flex flex-wrap gap-3">
         <a class="text-sm text-[#12352c] underline-offset-4 hover:underline" href="{{ route('ec.serials') }}">Serial lookup</a>

@@ -4,7 +4,6 @@
     $steps = [
         'staff' => 'Staff ID',
         'code' => 'SMS code',
-        'method' => 'Paper or online',
         'ballot' => 'Ballot',
         'done' => 'Done',
     ];

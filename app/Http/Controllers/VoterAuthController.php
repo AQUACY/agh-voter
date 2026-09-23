@@ -8,6 +8,7 @@ use App\Exceptions\InvalidOtpException;
 use App\Exceptions\OtpThrottleException;
 use App\Exceptions\SmsDeliveryException;
 use App\Exceptions\VoterNotFoundException;
+use App\Models\Election;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class VoterAuthController extends Controller
     public function enter(): View
     {
         return view('voter.enter', [
-            'election' => \App\Models\Election::current(),
+            'election' => Election::current(),
         ]);
     }
 
@@ -75,6 +76,7 @@ class VoterAuthController extends Controller
 
         $request->session()->regenerate();
         $request->session()->put('voter_id', $voter->id);
+        $request->session()->put('vote_method', 'digital');
         $request->session()->forget(['otp_staff_id', 'otp_staff_name', 'otp_phone_masked']);
 
         if ($this->wantsJson($request)) {
@@ -83,11 +85,11 @@ class VoterAuthController extends Controller
                 'staff_id' => $voter->staff_id,
                 'name' => $voter->name,
                 'phone_masked' => $voter->maskedPhone(),
-                'next' => 'method',
+                'next' => 'ballot',
             ]);
         }
 
-        return redirect()->route('voter.method');
+        return redirect()->route('voter.ballot');
     }
 
     private function wantsJson(Request $request): bool

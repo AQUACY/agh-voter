@@ -24,7 +24,7 @@ class BallotController extends Controller
         }
 
         if ($request->session()->get('vote_method') !== 'digital') {
-            return redirect()->route('voter.method');
+            $request->session()->put('vote_method', 'digital');
         }
 
         return view('voter.ballot', [
@@ -42,10 +42,7 @@ class BallotController extends Controller
         }
 
         if ($request->session()->get('vote_method') !== 'digital') {
-            return response()->json([
-                'message' => 'Choose paper or online first.',
-                'next' => 'method',
-            ], 403);
+            $request->session()->put('vote_method', 'digital');
         }
 
         return response()->json($ballots->payload($voter->election));
@@ -56,14 +53,7 @@ class BallotController extends Controller
         $voter = $this->voter($request);
 
         if ($request->session()->get('vote_method') !== 'digital') {
-            if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json([
-                    'message' => 'Choose paper or online first.',
-                    'next' => 'method',
-                ], 403);
-            }
-
-            return redirect()->route('voter.method');
+            $request->session()->put('vote_method', 'digital');
         }
 
         $validated = $request->validate([

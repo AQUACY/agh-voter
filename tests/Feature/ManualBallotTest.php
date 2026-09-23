@@ -70,15 +70,34 @@ class ManualBallotTest extends TestCase
         [$ec, $election] = $this->setupElection();
         $voter = $election->voters()->first();
 
+        $second = Position::query()->create([
+            'election_id' => $election->id,
+            'name' => 'Secretary',
+            'sort_order' => 2,
+        ]);
+        Candidate::query()->create([
+            'position_id' => $second->id,
+            'name' => 'Abena Owusu',
+            'sort_order' => 1,
+        ]);
+
         $this->actingAs($ec)->post('/ec/voters/'.$voter->id.'/paper');
         $serial = $voter->fresh()->paperBallotSerial->formatted();
 
-        $this->get('/paper/print')
+        $html = $this->get('/paper/print')
             ->assertOk()
             ->assertSee('Ballot serial')
             ->assertSee($serial)
+            ->assertSee('Cut here')
+            ->assertSee('Asesewa Government Hospital')
+            ->assertSee('Office of the Electoral Commission')
             ->assertSee('data:image/svg+xml;base64,', false)
-            ->assertDontSee($voter->staff_id);
+            ->assertDontSee($voter->staff_id)
+            ->getContent();
+
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'class="serial-code">'.$serial));
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'Ballot serial QR for'));
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'slip-mast'));
     }
 
     public function test_paper_counts_and_publish_are_required_for_public_results(): void

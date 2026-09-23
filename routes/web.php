@@ -6,6 +6,7 @@ use App\Http\Controllers\Ec\BallotSetupController;
 use App\Http\Controllers\Ec\DashboardController;
 use App\Http\Controllers\Ec\ElectionController;
 use App\Http\Controllers\Ec\ManualBallotController;
+use App\Http\Controllers\Ec\ProfileController;
 use App\Http\Controllers\PublicResultsController;
 use App\Http\Controllers\VoteMethodController;
 use App\Http\Controllers\VoterAuthController;
@@ -23,7 +24,6 @@ Route::post('/otp/resend', [VoterAuthController::class, 'requestOtp'])->name('vo
 Route::middleware(EnsureVoterAuthenticated::class)->group(function () {
     Route::get('/method', [VoteMethodController::class, 'show'])->name('voter.method');
     Route::post('/method/online', [VoteMethodController::class, 'online'])->name('voter.method.online');
-    Route::post('/method/paper', [VoteMethodController::class, 'paper'])->name('voter.method.paper');
     Route::get('/ballot', [BallotController::class, 'show'])->name('voter.ballot');
     Route::post('/ballot', [BallotController::class, 'store'])->name('voter.ballot.store');
 });
@@ -43,6 +43,8 @@ Route::prefix('ec')->group(function () {
         Route::get('/', [DashboardController::class, 'dashboard'])->name('ec.dashboard');
         Route::get('/settings', [ElectionController::class, 'edit'])->name('ec.settings');
         Route::put('/settings', [ElectionController::class, 'update'])->name('ec.settings.update');
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('ec.profile');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('ec.profile.password');
         Route::post('/open', [ElectionController::class, 'open'])->name('ec.open');
         Route::post('/close', [ElectionController::class, 'close'])->name('ec.close');
         Route::post('/setup', [ElectionController::class, 'setup'])->name('ec.setup');
@@ -81,7 +83,6 @@ Route::prefix('api/v1')->group(function () {
 
     Route::middleware(EnsureVoterAuthenticated::class)->group(function () {
         Route::post('/method/online', [VoteMethodController::class, 'online']);
-        Route::post('/method/paper', [VoteMethodController::class, 'paper']);
         Route::get('/ballot', [BallotController::class, 'payload']);
         Route::post('/ballot', [BallotController::class, 'store']);
     });

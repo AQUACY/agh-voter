@@ -97,11 +97,8 @@ class ElectionFlowTest extends TestCase
         $this->postJson('/api/v1/auth/otp/verify', [
             'staff_id' => $voter->staff_id,
             'otp' => $this->sms->otp,
-        ])->assertOk()->assertJsonPath('next', 'method');
+        ])->assertOk()->assertJsonPath('next', 'ballot');
 
-        $this->postJson('/api/v1/ballot', ['selections' => $selections])->assertStatus(403);
-
-        $this->postJson('/api/v1/method/online')->assertOk();
         $this->postJson('/api/v1/ballot', ['selections' => $selections])->assertOk();
 
         $this->assertNotNull($voter->fresh()->voted_at);

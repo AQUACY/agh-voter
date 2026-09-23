@@ -6,6 +6,7 @@ use App\Contracts\SmsProvider;
 use App\Models\Candidate;
 use App\Models\Election;
 use App\Models\Position;
+use App\Models\User;
 use App\Models\Voter;
 use App\Services\OtpService;
 use App\Services\SmsService;
@@ -39,36 +40,25 @@ class HybridDeskFlowTest extends TestCase
         $this->app->forgetInstance(OtpService::class);
     }
 
-    public function test_paper_choice_prints_sheets_and_closes_online_voting(): void
+    public function test_ec_paper_issue_prints_sheets_and_closes_online_voting(): void
     {
         $voter = $this->electionWithVoter();
-        $this->app->make(OtpService::class)->request($voter->staff_id);
+        $ec = User::factory()->create(['role' => 'ec']);
 
-        $this->post('/otp/verify', [
-            'staff_id' => $voter->staff_id,
-            'otp' => $this->sms->otp,
-        ])->assertRedirect(route('voter.method'));
-
-        $this->get('/method')
-            ->assertOk()
-            ->assertSee('How will you vote?')
-            ->assertSee('Print paper ballot')
-            ->assertSee('Vote online');
-
-        $this->get('/ballot')->assertRedirect(route('voter.method'));
-
-        $this->post('/method/paper')->assertRedirect(route('voter.paper.print'));
+        $this->actingAs($ec)
+            ->post('/ec/voters/'.$voter->id.'/paper')
+            ->assertRedirect(route('voter.paper.print'));
 
         $this->assertSame('manual', $voter->fresh()->vote_channel);
         $this->assertNotNull($voter->fresh()->voted_at);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'voter_voted_manual',
-            'actor_type' => 'voter',
+            'actor_type' => 'ec',
         ]);
 
         $this->get('/paper/print')
             ->assertOk()
-            ->assertSee('Secret paper ballot')
+            ->assertSee('Secret slip')
             ->assertSee('Digital access is now closed')
             ->assertSee('Printing for '.$voter->name)
             ->assertSee('Ballot serial')
@@ -93,7 +83,7 @@ class HybridDeskFlowTest extends TestCase
         $this->get('/paper/print')->assertRedirect(route('voter.enter'));
     }
 
-    public function test_online_choice_is_required_before_the_digital_ballot(): void
+    public function test_otp_verification_opens_the_digital_ballot_directly(): void
     {
         $voter = $this->electionWithVoter();
         $this->app->make(OtpService::class)->request($voter->staff_id);
@@ -101,10 +91,10 @@ class HybridDeskFlowTest extends TestCase
         $this->post('/otp/verify', [
             'staff_id' => $voter->staff_id,
             'otp' => $this->sms->otp,
-        ])->assertRedirect(route('voter.method'));
+        ])->assertRedirect(route('voter.ballot'));
 
-        $this->post('/method/online')->assertRedirect(route('voter.ballot'));
         $this->get('/ballot')->assertOk()->assertSee('Secret digital ballot');
+        $this->get('/method')->assertRedirect(route('voter.ballot'));
     }
 
     public function test_print_page_requires_a_just_issued_paper_session(): void
