@@ -13,7 +13,6 @@ use App\Models\Vote;
 use App\Models\Voter;
 use App\Support\UnopposedVoting;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class BallotService
 {
@@ -147,7 +146,7 @@ class BallotService
             $receipt = BallotReceipt::query()->create([
                 'election_id' => $election->id,
                 'voter_id' => $locked->id,
-                'receipt_code' => strtoupper(Str::random(10)),
+                'receipt_code' => BallotReceipt::generateUnique(),
                 'cast_at' => $now,
             ]);
 

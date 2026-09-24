@@ -7,7 +7,7 @@
     <div>
         <p class="kicker">Register</p>
         <h1 class="display mt-2 text-5xl font-semibold text-[var(--ink)]">Registered voters</h1>
-        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Voters cast online after Staff ID and SMS. Use Paper vote when the EC issues a printed sheet — that prints a QR serial (not the Staff ID) and closes online voting for that Staff ID. Use Reprint if the printer failed, power cut mid-print, or a sheet was spoiled; the same serial is printed again. Resolve a serial under Serial lookup.</p>
+        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Voters cast online after Staff ID and SMS and receive a digital receipt number on the finished screen. That receipt also appears in the Serial column here. Use Paper vote when the EC issues a printed sheet — that prints a QR serial (not the Staff ID) and closes online voting for that Staff ID. Use Reprint if the printer failed, power cut mid-print, or a sheet was spoiled; the same serial is printed again. Resolve a paper serial under Serial lookup.</p>
     </div>
     <div class="flex flex-wrap gap-3">
         <a class="text-sm text-[#12352c] underline-offset-4 hover:underline" href="{{ route('ec.serials') }}">Serial lookup</a>
@@ -16,7 +16,7 @@
 </div>
 
 <form method="GET" action="{{ route('ec.voters') }}" class="mb-5 flex gap-2">
-    <input name="q" value="{{ $q }}" placeholder="Search Staff ID, name, or ballot serial" class="flex-1 rounded-2xl bg-[#fffaf2] px-3 py-2 ring-1 ring-[#c4a35a]/20">
+    <input name="q" value="{{ $q }}" placeholder="Search Staff ID, name, paper serial, or digital receipt" class="flex-1 rounded-2xl bg-[#fffaf2] px-3 py-2 ring-1 ring-[#c4a35a]/20">
     <button class="rounded-full bg-white px-4 py-2 ring-1 ring-[#c4a35a]/30">Search</button>
 </form>
 
@@ -61,7 +61,7 @@
                     <td class="px-4 py-3">{{ $voter->name }}</td>
                     <td class="px-4 py-3">{{ $voter->maskedPhone() }}</td>
                     <td class="px-4 py-3">{{ $voter->voteChannelLabel() }}</td>
-                    <td class="px-4 py-3 font-mono tracking-wider">{{ $voter->paperBallotSerial?->formatted() ?? '—' }}</td>
+                    <td class="px-4 py-3 font-mono tracking-wider">{{ $voter->ballotReference() ?? '—' }}</td>
                     <td class="px-4 py-3 no-print">
                         <div class="flex flex-wrap gap-3">
                             @if (! $voter->hasVoted() && $election && ! $election->isPublished())

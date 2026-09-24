@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\AlreadyVotedException;
 use App\Exceptions\ElectionUnavailableException;
 use App\Exceptions\InvalidBallotException;
+use App\Models\PaperBallotSerial;
 use App\Models\Voter;
 use App\Services\BallotService;
 use Illuminate\Http\JsonResponse;
@@ -85,7 +86,7 @@ class BallotController extends Controller
         if ($request->expectsJson() || $request->is('api/*')) {
             return response()->json([
                 'ok' => true,
-                'receipt' => $receipt->receipt_code,
+                'receipt' => $receipt->formatted(),
             ]);
         }
 
@@ -100,7 +101,9 @@ class BallotController extends Controller
             return redirect()->route('voter.enter');
         }
 
-        return view('voter.done', ['receipt' => $code]);
+        return view('voter.done', [
+            'receipt' => PaperBallotSerial::format($code),
+        ]);
     }
 
     private function voter(Request $request): Voter

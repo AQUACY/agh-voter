@@ -94,6 +94,9 @@ class DashboardController extends Controller
                     $builder->orWhereHas('paperBallotSerial', function ($serialQuery) use ($normalized, $term) {
                         $serialQuery->where('serial', 'like', '%'.$normalized.'%')
                             ->orWhere('serial', 'like', $term);
+                    })->orWhereHas('ballotReceipt', function ($receiptQuery) use ($normalized, $term) {
+                        $receiptQuery->where('receipt_code', 'like', '%'.$normalized.'%')
+                            ->orWhere('receipt_code', 'like', $term);
                     });
                 }
             });
@@ -101,7 +104,7 @@ class DashboardController extends Controller
 
         return view('ec.voters', [
             'election' => $election,
-            'voters' => $query ? $query->with('paperBallotSerial')->paginate(50)->withQueryString() : collect(),
+            'voters' => $query ? $query->with(['paperBallotSerial', 'ballotReceipt'])->paginate(50)->withQueryString() : collect(),
             'q' => (string) $request->string('q'),
         ]);
     }

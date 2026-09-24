@@ -99,7 +99,14 @@ class ElectionFlowTest extends TestCase
             'otp' => $this->sms->otp,
         ])->assertOk()->assertJsonPath('next', 'ballot');
 
-        $this->postJson('/api/v1/ballot', ['selections' => $selections])->assertOk();
+        $response = $this->postJson('/api/v1/ballot', ['selections' => $selections])
+            ->assertOk()
+            ->assertJsonStructure(['ok', 'receipt']);
+
+        $receipt = $voter->fresh()->ballotReceipt;
+        $this->assertNotNull($receipt);
+        $this->assertSame($receipt->formatted(), $response->json('receipt'));
+        $this->assertMatchesRegularExpression('/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/', $receipt->formatted());
 
         $this->assertNotNull($voter->fresh()->voted_at);
         $this->assertSame('digital', $voter->fresh()->vote_channel);
@@ -108,9 +115,37 @@ class ElectionFlowTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'ballot_cast']);
         $this->assertArrayNotHasKey('voter_id', Vote::query()->first()->getAttributes());
 
+        $ec = User::factory()->create(['role' => 'ec']);
+        $this->actingAs($ec)
+            ->get('/ec/voters')
+            ->assertOk()
+            ->assertSee('Digital')
+            ->assertSee($receipt->formatted());
+
         $this->withSession(['voter_id' => $voter->id])
             ->postJson('/api/v1/ballot', ['selections' => $selections])
             ->assertStatus(403);
+    }
+
+    public function test_digital_ballot_shows_receipt_on_the_finished_screen(): void
+    {
+        [$voter, , $selections] = $this->electionWithVoter();
+        $this->app->make(OtpService::class)->request($voter->staff_id);
+
+        $this->post('/otp/verify', [
+            'staff_id' => $voter->staff_id,
+            'otp' => $this->sms->otp,
+        ])->assertRedirect(route('voter.ballot'));
+
+        $this->post('/ballot', ['selections' => $selections])
+            ->assertRedirect(route('voter.done'));
+
+        $formatted = $voter->fresh()->ballotReceipt->formatted();
+
+        $this->get('/done')
+            ->assertOk()
+            ->assertSee('Ballot receipt')
+            ->assertSee($formatted);
     }
 
     public function test_live_results_require_ec_authentication(): void

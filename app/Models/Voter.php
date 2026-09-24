@@ -49,6 +49,24 @@ class Voter extends Model
         return $this->hasOne(PaperBallotSerial::class);
     }
 
+    public function ballotReceipt(): HasOne
+    {
+        return $this->hasOne(BallotReceipt::class);
+    }
+
+    public function ballotReference(): ?string
+    {
+        if ($this->votedOnPaper()) {
+            return $this->paperBallotSerial?->formatted();
+        }
+
+        if ($this->hasVoted() && $this->vote_channel === 'digital') {
+            return $this->ballotReceipt?->formatted();
+        }
+
+        return null;
+    }
+
     public function hasVoted(): bool
     {
         return $this->voted_at !== null;
