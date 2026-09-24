@@ -69,6 +69,7 @@
                             </label>
                         </div>
                         <input name="unopposed_threshold_value" type="number" min="1" max="100000" value="{{ old('unopposed_threshold_value', $position->unopposed_threshold_value) }}" placeholder="Threshold value" class="w-full rounded-2xl bg-[#fffaf2] px-3 py-2 ring-1 ring-[#c4a35a]/20" @disabled($election->ballotLocked())>
+                        <p class="text-xs text-[#6b6254]">Percent needs more than that share of Yes + No. At 50%, that is half of turnout plus one Yes.</p>
                         <div class="flex flex-wrap gap-4 text-sm">
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="unopposed_fail_outcome" value="open_nominations" x-model="fail" @disabled($election->ballotLocked())>

@@ -37,6 +37,43 @@ class ManualBallotTest extends TestCase
             ->assertStatus(403);
     }
 
+    public function test_ec_can_reprint_an_issued_paper_ballot_with_the_same_serial(): void
+    {
+        [$ec, $election] = $this->setupElection();
+        $voter = $election->voters()->first();
+
+        $this->actingAs($ec)->post('/ec/voters/'.$voter->id.'/paper');
+        $serial = $voter->fresh()->paperBallotSerial->serial;
+
+        $this->withSession([])->actingAs($ec)
+            ->post('/ec/voters/'.$voter->id.'/paper/reprint')
+            ->assertRedirect(route('voter.paper.print'));
+
+        $this->assertSame($serial, $voter->fresh()->paperBallotSerial->serial);
+        $this->assertDatabaseCount('paper_ballot_serials', 1);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'paper_ballot_reprinted',
+            'actor_type' => 'ec',
+        ]);
+
+        $this->get('/paper/print')
+            ->assertOk()
+            ->assertSee($voter->fresh()->paperBallotSerial->formatted())
+            ->assertDontSee($voter->staff_id);
+    }
+
+    public function test_reprint_is_rejected_for_digital_or_unvoted_staff(): void
+    {
+        [$ec, $election] = $this->setupElection();
+        $voter = $election->voters()->first();
+
+        $this->actingAs($ec)
+            ->from('/ec/voters')
+            ->post('/ec/voters/'.$voter->id.'/paper/reprint')
+            ->assertRedirect('/ec/voters')
+            ->assertSessionHasErrors('voters');
+    }
+
     public function test_ec_can_resolve_paper_serial_to_staff_id(): void
     {
         [$ec, $election] = $this->setupElection();

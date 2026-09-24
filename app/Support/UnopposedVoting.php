@@ -82,7 +82,8 @@ class UnopposedVoting
         $percent = $total > 0 ? round(($yes / $total) * 100, 2) : 0.0;
 
         $met = match ($rules['threshold_type']) {
-            self::THRESHOLD_PERCENT => $total > 0 && $percent >= $rules['threshold_value'],
+            // More than X% of Yes+No (turnout). At 50% that is half + 1 vote.
+            self::THRESHOLD_PERCENT => $total > 0 && $yes > ($total * $rules['threshold_value'] / 100),
             self::THRESHOLD_COUNT => $yes >= $rules['threshold_value'],
             default => false,
         };

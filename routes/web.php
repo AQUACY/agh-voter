@@ -68,6 +68,7 @@ Route::prefix('ec')->group(function () {
         Route::get('/voters', [DashboardController::class, 'voters'])->name('ec.voters');
         Route::post('/voters', [DashboardController::class, 'storeVoter'])->name('ec.voters.store');
         Route::post('/voters/{voter}/paper', [DashboardController::class, 'markPaperVote'])->name('ec.voters.paper');
+        Route::post('/voters/{voter}/paper/reprint', [DashboardController::class, 'reprintPaperVote'])->name('ec.voters.paper.reprint');
         Route::delete('/voters/{voter}', [DashboardController::class, 'destroyVoter'])->name('ec.voters.destroy');
         Route::post('/voters/import', [DashboardController::class, 'importVoters'])->name('ec.voters.import');
         Route::get('/voters/template', [DashboardController::class, 'template'])->name('ec.voters.template');

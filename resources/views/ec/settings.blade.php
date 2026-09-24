@@ -79,7 +79,7 @@
                 <div>
                     <label class="label" for="unopposed_threshold_value">Threshold value</label>
                     <input id="unopposed_threshold_value" name="unopposed_threshold_value" type="number" min="1" max="100000" value="{{ old('unopposed_threshold_value', $election->unopposed_threshold_value) }}" class="field mt-2" @disabled($locked)>
-                    <p class="mt-1 text-xs text-[var(--muted)]">For percent, use 1–100 (e.g. 50). For count, use the minimum Yes votes required.</p>
+                    <p class="mt-1 text-xs text-[var(--muted)]">For percent, the candidate needs more than that share of Yes + No votes. At 50%, that is half of turnout plus one Yes. For count, use the minimum Yes votes required.</p>
                 </div>
                 <div>
                     <p class="label">If Yes threshold is not met</p>

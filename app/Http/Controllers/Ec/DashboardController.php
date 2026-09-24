@@ -6,6 +6,7 @@ use App\Exceptions\ElectionSetupException;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Election;
+use App\Models\PaperBallotSerial;
 use App\Models\Voter;
 use App\Services\ElectionControlService;
 use App\Services\ManualBallotService;
@@ -86,7 +87,7 @@ class DashboardController extends Controller
 
         if ($election && $request->filled('q')) {
             $term = '%'.trim((string) $request->string('q')).'%';
-            $normalized = \App\Models\PaperBallotSerial::normalize((string) $request->string('q'));
+            $normalized = PaperBallotSerial::normalize((string) $request->string('q'));
             $query->where(function ($builder) use ($term, $normalized) {
                 $builder->where('staff_id', 'like', $term)->orWhere('name', 'like', $term);
                 if ($normalized !== '') {
@@ -229,6 +230,21 @@ class DashboardController extends Controller
     {
         try {
             [, $serial] = $manual->lockPaperVote($voter);
+        } catch (ElectionSetupException $e) {
+            return back()->withErrors(['voters' => $e->getMessage()]);
+        }
+
+        $request->session()->put('paper_print', true);
+        $request->session()->put('paper_staff_name', $voter->name);
+        $request->session()->put('paper_serial', $serial->serial);
+
+        return redirect()->route('voter.paper.print');
+    }
+
+    public function reprintPaperVote(Request $request, Voter $voter, ManualBallotService $manual): RedirectResponse
+    {
+        try {
+            [, $serial] = $manual->reprintPaperBallot($voter);
         } catch (ElectionSetupException $e) {
             return back()->withErrors(['voters' => $e->getMessage()]);
         }

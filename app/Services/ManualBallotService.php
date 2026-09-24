@@ -53,6 +53,35 @@ class ManualBallotService
         });
     }
 
+    /**
+     * Reprint an already-issued paper ballot (same serial) after a spoiled sheet or printer failure.
+     *
+     * @return array{0: Voter, 1: PaperBallotSerial}
+     */
+    public function reprintPaperBallot(Voter $voter): array
+    {
+        if ($voter->election->isPublished()) {
+            throw new ElectionSetupException('Published results cannot change.');
+        }
+
+        if (! $voter->votedOnPaper()) {
+            throw new ElectionSetupException('This staff member does not have a paper ballot to reprint.');
+        }
+
+        $serial = $voter->paperBallotSerial;
+
+        if (! $serial) {
+            throw new ElectionSetupException('No paper ballot serial was found for this staff member.');
+        }
+
+        AuditLog::record('paper_ballot_reprinted', 'ec', auth()->id(), [
+            'staff_id' => $voter->staff_id,
+            'paper_serial' => $serial->serial,
+        ]);
+
+        return [$voter->fresh(), $serial];
+    }
+
     public function findBySerial(Election $election, string $serial): ?PaperBallotSerial
     {
         $normalized = PaperBallotSerial::normalize($serial);

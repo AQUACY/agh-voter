@@ -7,7 +7,7 @@
     <div>
         <p class="kicker">Register</p>
         <h1 class="display mt-2 text-5xl font-semibold text-[var(--ink)]">Registered voters</h1>
-        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Voters cast online after Staff ID and SMS. Use Paper vote here when the EC issues a printed sheet — that prints a QR serial (not the Staff ID) and closes online voting for that Staff ID. Resolve a serial under Serial lookup.</p>
+        <p class="mt-2 max-w-2xl text-sm text-[#5c5346]">Voters cast online after Staff ID and SMS. Use Paper vote when the EC issues a printed sheet — that prints a QR serial (not the Staff ID) and closes online voting for that Staff ID. Use Reprint if the printer failed, power cut mid-print, or a sheet was spoiled; the same serial is printed again. Resolve a serial under Serial lookup.</p>
     </div>
     <div class="flex flex-wrap gap-3">
         <a class="text-sm text-[#12352c] underline-offset-4 hover:underline" href="{{ route('ec.serials') }}">Serial lookup</a>
@@ -68,6 +68,11 @@
                                 <form method="POST" action="{{ route('ec.voters.paper', $voter) }}" onsubmit="return confirm('Issue a paper ballot for {{ $voter->name }} ({{ $voter->staff_id }})? This locks the digital ballot and prints a QR serial sheet.')">
                                     @csrf
                                     <button class="text-[#12352c]">Paper vote</button>
+                                </form>
+                            @elseif ($voter->votedOnPaper() && $election && ! $election->isPublished())
+                                <form method="POST" action="{{ route('ec.voters.paper.reprint', $voter) }}" onsubmit="return confirm('Reprint the paper ballot for {{ $voter->name }} ({{ $voter->staff_id }}) with the same serial? Use this after a power cut, printer jam, or spoiled sheet.')">
+                                    @csrf
+                                    <button class="text-[#12352c]">Reprint</button>
                                 </form>
                             @endif
                             @if ($election && ! $election->registerLocked() && ! $voter->hasVoted())

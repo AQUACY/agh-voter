@@ -117,6 +117,40 @@ class UnopposedYesNoTest extends TestCase
         $this->assertContains($candidate->name, $results['positions'][0]['leaders']->all());
     }
 
+    public function test_unopposed_fifty_percent_requires_half_of_turnout_plus_one(): void
+    {
+        [, $election, $candidate] = $this->unopposedElection([
+            'unopposed_threshold_type' => 'percent',
+            'unopposed_threshold_value' => 50,
+        ]);
+
+        foreach (['yes', 'yes', 'no', 'no'] as $choice) {
+            Vote::query()->create([
+                'election_id' => $election->id,
+                'position_id' => $candidate->position_id,
+                'candidate_id' => $candidate->id,
+                'choice' => $choice,
+                'created_at' => now(),
+            ]);
+        }
+
+        $results = $this->app->make(ResultService::class)->live($election->fresh());
+        $this->assertFalse($results['positions'][0]['unopposed']['threshold_met']);
+
+        Vote::query()->create([
+            'election_id' => $election->id,
+            'position_id' => $candidate->position_id,
+            'candidate_id' => $candidate->id,
+            'choice' => 'yes',
+            'created_at' => now(),
+        ]);
+
+        $results = $this->app->make(ResultService::class)->live($election->fresh());
+        $this->assertTrue($results['positions'][0]['unopposed']['threshold_met']);
+        $this->assertSame(3, $results['positions'][0]['unopposed']['yes']);
+        $this->assertSame(2, $results['positions'][0]['unopposed']['no']);
+    }
+
     public function test_per_position_other_outcome_shows_custom_note(): void
     {
         $election = Election::query()->create([
